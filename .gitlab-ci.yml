@@ -1,0 +1,64 @@
+cache:
+  key: ${CI_BUILD_REF_NAME}_1
+  paths:
+    - node_modules/
+
+stages:
+  - build
+  - deploy
+
+build:tags:
+  stage: build
+  script:
+    - npm install
+    - npm run build:library
+  only:
+    - /^v.*$/
+  except:
+    - branches
+  artifacts:
+    paths:
+    - dist/
+  tags:
+    - shell
+
+deploy:tags:
+  stage: deploy
+  script:
+    - echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
+    - npm run prepublishOnly
+    - npm publish dist/angular2-tinymce-lib
+  only:
+    - /^v.*$/
+  except:
+    - branches
+  dependencies:
+    - build:tags
+  tags:
+    - shell
+
+build:master:
+  stage: build
+  script:
+    - npm install
+    - npm run build:library
+    - npm run build
+  only:
+    - master
+  artifacts:
+    paths:
+    - dist/
+  tags:
+    - shell
+
+deploy:master:
+  stage: deploy
+  script:
+    - mv dist/angular2-tinymce/index.html dist/angular2-tinymce/200.html
+    - PATH=$(npm bin):$PATH surge --project ./dist/angular2-tinymce --domain https://angular2-tinymce.surge.sh
+  only:
+    - master
+  dependencies:
+    - build:master
+  tags:
+    - shell
